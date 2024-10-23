@@ -2,10 +2,20 @@ import pandas as pd
 import mne
 import logging
 from functools import reduce
+import nltk
+from nltk.corpus import stopwords
+import string
+import spacy
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Initialize SpaCy
+nlp = spacy.load('en_core_web_sm')
+
+# Download NLTK stopwords if not already
+nltk.download('stopwords')
 
 def preprocess_eye_tracking(df):
     try:
@@ -57,13 +67,39 @@ def preprocess_face_heatmap(df):
 def preprocess_survey(df):
     try:
         initial_shape = df.shape
-        df.fillna(df.mean(), inplace=True)  # Assuming numeric responses
+        # Handling numerical responses
+        numerical_cols = df.select_dtypes(include=['int64', 'float64']).columns
+        df[numerical_cols] = df[numerical_cols].fillna(df[numerical_cols].mean())
+        
+        # Handling textual responses if any
+        if 'response_text' in df.columns:
+            df['response_text'] = df['response_text'].apply(clean_text)
+            df['response_text'] = df['response_text'].fillna('')
+        
         logger.info(f"Survey data preprocessed: {initial_shape} -> {df.shape}")
         # Additional preprocessing steps (e.g., encoding categorical responses)
         return df
     except Exception as e:
         logger.error(f"Error preprocessing survey data: {e}")
         raise
+
+def clean_text(text):
+    try:
+        # Lowercase
+        text = text.lower()
+        # Remove punctuation
+        text = text.translate(str.maketrans('', '', string.punctuation))
+        # Remove stopwords
+        stop_words = set(stopwords.words('english'))
+        tokens = text.split()
+        tokens = [word for word in tokens if word not in stop_words]
+        # Lemmatization using SpaCy
+        doc = nlp(' '.join(tokens))
+        lemmatized = ' '.join([token.lemma_ for token in doc])
+        return lemmatized
+    except Exception as e:
+        logger.error(f"Error cleaning text: {e}")
+        return ''
 
 def synchronize_data(dfs, on='timestamp'):
     """
