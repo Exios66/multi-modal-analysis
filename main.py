@@ -5,326 +5,325 @@ import argparse
 import pandas as pd
 import numpy as np
 import logging
-from datetime import datetime
-from typing import Dict, List, Optional, Tuple
 import json
+import yaml
+import multiprocessing as mp
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple, Any, Union
+from pathlib import Path
+from dataclasses import dataclass, field
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from sklearn.model_selection import cross_validate
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import make_scorer
+from scipy import stats
+import warnings
 
 # Import custom modules
 from config import Config, DEFAULT_CONFIG
-from src.data_ingestion import (
-    load_eye_tracking_data,
-    load_eeg_data,
-    load_survey_data,
-    load_vitals_data,
-    load_face_heatmap_data
-)
-from src.data_preprocessing import (
-    preprocess_eye_tracking,
-    preprocess_eeg,
-    preprocess_survey,
-    preprocess_vitals,
-    preprocess_face_heatmap,
-    synchronize_data
-)
-from src.feature_extraction import (
-    extract_eye_tracking_features,
-    extract_eeg_features,
-    extract_survey_features,
-    extract_vitals_features,
-    extract_face_heatmap_features
-)
-from src.correlation_analysis import (
-    compute_correlations,
-    identify_significant_correlations,
-    perform_regression
-)
-from src.visualization import (
-    plot_correlation_heatmap,
-    plot_feature_distributions,
-    plot_regression_results,
-    plot_time_series
-)
-from src.machine_learning import (
-    train_classification_model,
-    train_regression_model,
-    evaluate_classification_model,
-    evaluate_regression_model,
-    save_model
-)
+from src.data_ingestion import *
+from src.data_preprocessing import *
+from src.feature_extraction import *
+from src.correlation_analysis import *
+from src.visualization import *
+from src.machine_learning import *
 
-def setup_logging(config: Config) -> None:
-    """Configure logging based on configuration."""
-    log_level = logging.DEBUG if config.debug else logging.INFO
-    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logging.basicConfig(
-        level=log_level,
-        format=log_format,
-        handlers=[
-            logging.FileHandler(os.path.join(config.output.base_dir, 'analysis.log')),
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
+# Enhanced configuration dataclass
+@dataclass
+class EnhancedConfig:
+    """Enhanced configuration with additional parameters."""
+    debug: bool = False
+    n_jobs: int = mp.cpu_count()
+    chunk_size: int = 10000
+    cache_dir: str = ".cache"
+    timeout: int = 3600
+    retries: int = 3
+    
+    data: Dict[str, Any] = field(default_factory=lambda: {
+        "paths": {},
+        "formats": {},
+        "sampling_rates": {},
+        "validation_rules": {}
+    })
+    
+    processing: Dict[str, Any] = field(default_factory=lambda: {
+        "parallel": True,
+        "batch_size": 1000,
+        "memory_limit": "8G",
+        "compression": "snappy"
+    })
+    
+    features: Dict[str, Any] = field(default_factory=lambda: {
+        "selection_method": "mutual_info",
+        "n_features": 50,
+        "importance_threshold": 0.01
+    })
+    
+    ml: Dict[str, Any] = field(default_factory=lambda: {
+        "cross_validation": {
+            "n_splits": 5,
+            "shuffle": True,
+            "random_state": 42
+        },
+        "hyperparameter_tuning": {
+            "method": "bayesian",
+            "n_trials": 100,
+            "timeout": 3600
+        }
+    })
 
-def validate_data(data: Dict[str, pd.DataFrame]) -> bool:
-    """Validate loaded data for completeness and basic quality checks."""
-    try:
-        for name, df in data.items():
-            if df is None or df.empty:
-                logging.error(f"Data validation failed: {name} is empty")
+class DataValidator:
+    """Validates data quality and integrity."""
+    
+    def __init__(self, config: EnhancedConfig):
+        self.config = config
+        self.validation_rules = config.data.validation_rules
+    
+    def validate_schema(self, df: pd.DataFrame, dataset_name: str) -> bool:
+        """Validate dataset schema against expected columns and types."""
+        expected_schema = self.validation_rules.get(dataset_name, {}).get("schema", {})
+        if not expected_schema:
+            return True
+            
+        actual_dtypes = df.dtypes.to_dict()
+        for col, dtype in expected_schema.items():
+            if col not in actual_dtypes:
+                logging.error(f"Missing column {col} in {dataset_name}")
                 return False
-            if df.isnull().values.any():
-                logging.warning(f"Missing values found in {name}")
-            if len(df) < 10:  # Minimum sample size check
-                logging.warning(f"Small sample size in {name}: {len(df)} records")
+            if not np.issubdtype(actual_dtypes[col], dtype):
+                logging.error(f"Invalid dtype for {col} in {dataset_name}")
+                return False
         return True
-    except Exception as e:
-        logging.error(f"Data validation error: {e}")
-        return False
-
-def load_data(config: Config) -> Dict[str, pd.DataFrame]:
-    """Load all data sources with timing and validation."""
-    start_time = time.time()
-    data = {}
     
-    try:
-        data['eye_tracking'] = load_eye_tracking_data(config.data.eye_tracking_path)
-        data['eeg'] = load_eeg_data(config.data.eeg_path)
-        data['survey'] = load_survey_data(config.data.survey_path)
-        data['vitals'] = load_vitals_data(config.data.vitals_path)
-        data['face_heatmap'] = load_face_heatmap_data(config.data.face_heatmap_path)
+    def validate_ranges(self, df: pd.DataFrame, dataset_name: str) -> bool:
+        """Validate numeric columns are within expected ranges."""
+        range_rules = self.validation_rules.get(dataset_name, {}).get("ranges", {})
+        if not range_rules:
+            return True
+            
+        for col, (min_val, max_val) in range_rules.items():
+            if col in df.columns:
+                if not df[col].between(min_val, max_val).all():
+                    logging.error(f"Values out of range for {col} in {dataset_name}")
+                    return False
+        return True
+
+class DataProcessor:
+    """Handles data processing with parallel execution capabilities."""
+    
+    def __init__(self, config: EnhancedConfig):
+        self.config = config
+        self.executor = (ProcessPoolExecutor(max_workers=config.n_jobs) 
+                        if config.processing.parallel else None)
+    
+    def process_in_parallel(self, func: callable, data: pd.DataFrame) -> pd.DataFrame:
+        """Process data in parallel chunks."""
+        if not self.config.processing.parallel:
+            return func(data)
+            
+        chunks = np.array_split(data, max(1, len(data) // self.config.processing.batch_size))
+        processed_chunks = list(self.executor.map(func, chunks))
+        return pd.concat(processed_chunks, axis=0)
+    
+    def apply_feature_extraction(self, data: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+        """Extract features with parallel processing support."""
+        features_list = []
+        for name, df in data.items():
+            extract_func = globals()[f"extract_{name}_features"]
+            features = self.process_in_parallel(extract_func, df)
+            features_list.append(features)
+        return pd.concat(features_list, axis=1)
+
+class ModelTrainer:
+    """Handles model training with advanced capabilities."""
+    
+    def __init__(self, config: EnhancedConfig):
+        self.config = config
+        self.models = {}
+        self.metrics = {}
+    
+    def create_pipeline(self, model_type: str) -> Pipeline:
+        """Create a sklearn pipeline with preprocessing steps."""
+        return Pipeline([
+            ('scaler', StandardScaler()),
+            ('model', get_model_class(model_type)(**self.config.ml.get(model_type, {})))
+        ])
+    
+    def train_with_cv(self, X: pd.DataFrame, y: pd.Series, model_type: str) -> Dict:
+        """Train model with cross-validation and advanced metrics."""
+        pipeline = self.create_pipeline(model_type)
+        cv_params = self.config.ml.cross_validation
         
-        logging.info(f"Data loading completed in {time.time() - start_time:.2f} seconds")
-        return data
-    except Exception as e:
-        logging.error(f"Error loading data: {e}")
-        raise
-
-def preprocess_data(data: Dict[str, pd.DataFrame], config: Config) -> Dict[str, pd.DataFrame]:
-    """Preprocess all data sources with timing."""
-    start_time = time.time()
-    
-    try:
-        processed_data = {
-            'eye_tracking': preprocess_eye_tracking(data['eye_tracking']),
-            'eeg': preprocess_eeg(data['eeg']),
-            'survey': preprocess_survey(data['survey']),
-            'vitals': preprocess_vitals(data['vitals']),
-            'face_heatmap': preprocess_face_heatmap(data['face_heatmap'])
+        scoring = {
+            'mse': make_scorer(lambda y_true, y_pred: -mean_squared_error(y_true, y_pred)),
+            'r2': 'r2',
+            'mae': 'neg_mean_absolute_error'
         }
         
-        logging.info(f"Data preprocessing completed in {time.time() - start_time:.2f} seconds")
-        return processed_data
-    except Exception as e:
-        logging.error(f"Error preprocessing data: {e}")
-        raise
-
-def extract_features(processed_data: Dict[str, pd.DataFrame], config: Config) -> pd.DataFrame:
-    """Extract features from all processed data sources."""
-    start_time = time.time()
-    
-    try:
-        features = {
-            **extract_eye_tracking_features(processed_data['eye_tracking']),
-            **extract_eeg_features(processed_data['eeg']),
-            **extract_survey_features(processed_data['survey']),
-            **extract_vitals_features(processed_data['vitals']),
-            **extract_face_heatmap_features(processed_data['face_heatmap'])
+        cv_results = cross_validate(
+            pipeline, X, y,
+            cv=cv_params.n_splits,
+            scoring=scoring,
+            n_jobs=self.config.n_jobs,
+            return_estimator=True
+        )
+        
+        self.models[model_type] = cv_results['estimator']
+        self.metrics[model_type] = {
+            metric: np.mean(scores) for metric, scores in cv_results.items()
+            if metric.startswith('test_')
         }
         
-        features_df = pd.DataFrame([features])
-        logging.info(f"Feature extraction completed in {time.time() - start_time:.2f} seconds")
-        return features_df
-    except Exception as e:
-        logging.error(f"Error extracting features: {e}")
-        raise
-
-def perform_analysis(features_df: pd.DataFrame, config: Config) -> Dict:
-    """Perform correlation and regression analysis."""
-    start_time = time.time()
-    results = {}
-    
-    try:
-        # Correlation analysis
-        corr_matrix = compute_correlations(features_df, method=config.analysis.correlation_method)
-        significant_corrs = identify_significant_correlations(
-            corr_matrix, 
-            threshold=config.analysis.correlation_threshold,
-            method=config.analysis.correlation_method
-        )
-        
-        # Regression analysis
-        if config.ml.target_feature in features_df.columns:
-            regression_results = perform_regression(features_df, target_feature=config.ml.target_feature)
-        else:
-            regression_results = None
-            logging.warning(f"Target feature '{config.ml.target_feature}' not found")
-        
-        results = {
-            'correlation_matrix': corr_matrix,
-            'significant_correlations': significant_corrs,
-            'regression_results': regression_results
+        return {
+            'model': pipeline,
+            'cv_results': cv_results,
+            'metrics': self.metrics[model_type]
         }
-        
-        logging.info(f"Analysis completed in {time.time() - start_time:.2f} seconds")
-        return results
-    except Exception as e:
-        logging.error(f"Error performing analysis: {e}")
-        raise
 
-def train_models(features_df: pd.DataFrame, config: Config) -> Dict:
-    """Train and evaluate machine learning models."""
-    start_time = time.time()
+class ResultsManager:
+    """Manages results storage and retrieval."""
     
-    try:
-        X = features_df.drop(columns=[config.ml.target_feature])
-        y = features_df[config.ml.target_feature]
-        
-        # Train models
-        model = train_regression_model(
-            X, y,
-            model_type=config.ml.model_type,
-            params=config.ml.model_params.get(config.ml.model_type)
-        )
-        
-        # Evaluate models
-        mse, r2 = evaluate_regression_model(model, X, y)
-        
-        # Save model if configured
-        if config.ml.save_model:
-            model_path = os.path.join(
-                config.output.base_dir,
-                config.output.models_dir,
-                f"{config.ml.model_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.joblib"
-            )
-            save_model(model, model_path)
-        
-        results = {
-            'model': model,
-            'metrics': {
-                'mse': mse,
-                'r2': r2
-            }
-        }
-        
-        logging.info(f"Model training completed in {time.time() - start_time:.2f} seconds")
-        return results
-    except Exception as e:
-        logging.error(f"Error training models: {e}")
-        raise
-
-def generate_visualizations(features_df: pd.DataFrame, analysis_results: Dict, config: Config) -> None:
-    """Generate and save all visualizations."""
-    start_time = time.time()
+    def __init__(self, config: EnhancedConfig):
+        self.config = config
+        self.base_dir = Path(config.output.base_dir)
+        self.setup_directories()
     
-    try:
-        plots_dir = os.path.join(config.output.base_dir, config.output.plots_dir)
-        
-        # Correlation heatmap
-        plot_correlation_heatmap(
-            analysis_results['correlation_matrix'],
-            output_path=os.path.join(plots_dir, f"correlation_heatmap.{config.output.file_formats['plots']}")
-        )
-        
-        # Feature distributions
-        plot_feature_distributions(
-            features_df,
-            output_path=os.path.join(plots_dir, f"feature_distributions.{config.output.file_formats['plots']}")
-        )
-        
-        # Regression results
-        if analysis_results['regression_results'] is not None:
-            plot_regression_results(
-                analysis_results['regression_results'],
-                output_path=os.path.join(plots_dir, f"regression_results.{config.output.file_formats['plots']}")
-            )
-        
-        logging.info(f"Visualization generation completed in {time.time() - start_time:.2f} seconds")
-    except Exception as e:
-        logging.error(f"Error generating visualizations: {e}")
-        raise
+    def setup_directories(self):
+        """Create necessary directories for results storage."""
+        for dir_name in ['models', 'plots', 'results', 'logs']:
+            (self.base_dir / dir_name).mkdir(parents=True, exist_ok=True)
+    
+    def save_results(self, results: Dict[str, Any], timestamp: str):
+        """Save results with proper formatting and compression."""
+        for name, data in results.items():
+            path = self.base_dir / 'results' / f"{name}_{timestamp}"
+            
+            if isinstance(data, pd.DataFrame):
+                data.to_parquet(
+                    f"{path}.parquet",
+                    compression=self.config.processing.compression
+                )
+            elif isinstance(data, dict):
+                with open(f"{path}.json", 'w') as f:
+                    json.dump(data, f, indent=4)
+            else:
+                logging.warning(f"Unsupported data type for {name}")
 
-def save_results(features_df: pd.DataFrame, analysis_results: Dict, ml_results: Dict, config: Config) -> None:
-    """Save all results to files."""
-    try:
-        results_dir = os.path.join(config.output.base_dir, config.output.results_dir)
-        
-        # Save features
-        features_df.to_csv(
-            os.path.join(results_dir, f"features.{config.output.file_formats['results']}"),
-            index=False
-        )
-        
-        # Save correlation results
-        analysis_results['significant_correlations'].to_csv(
-            os.path.join(results_dir, f"significant_correlations.{config.output.file_formats['results']}"),
-            index=False
-        )
-        
-        # Save ML metrics
-        with open(os.path.join(results_dir, 'ml_metrics.json'), 'w') as f:
-            json.dump(ml_results['metrics'], f, indent=4)
-        
-        logging.info("Results saved successfully")
-    except Exception as e:
-        logging.error(f"Error saving results: {e}")
-        raise
+def setup_logging(config: EnhancedConfig) -> None:
+    """Enhanced logging setup with rotation and formatting."""
+    log_dir = Path(config.output.base_dir) / 'logs'
+    log_dir.mkdir(parents=True, exist_ok=True)
+    
+    log_path = log_dir / f"analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    
+    handlers = [
+        logging.FileHandler(log_path),
+        logging.StreamHandler(sys.stdout)
+    ]
+    
+    logging.basicConfig(
+        level=logging.DEBUG if config.debug else logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=handlers
+    )
+    
+    # Set specific logging levels for verbose libraries
+    logging.getLogger('matplotlib').setLevel(logging.WARNING)
+    logging.getLogger('PIL').setLevel(logging.WARNING)
 
-def parse_arguments():
-    """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description='Multi-modal Analysis Pipeline')
+def parse_arguments() -> argparse.Namespace:
+    """Enhanced argument parsing with additional options."""
+    parser = argparse.ArgumentParser(description='Enhanced Multi-modal Analysis Pipeline')
     parser.add_argument('--config', type=str, help='Path to configuration file')
     parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+    parser.add_argument('--parallel', action='store_true', help='Enable parallel processing')
+    parser.add_argument('--n-jobs', type=int, help='Number of parallel jobs')
+    parser.add_argument('--output-dir', type=str, help='Output directory')
     return parser.parse_args()
 
 def main():
-    """Main execution pipeline."""
-    # Parse arguments
+    """Enhanced main execution pipeline."""
+    # Parse arguments and load configuration
     args = parse_arguments()
     
-    # Load configuration
-    config = DEFAULT_CONFIG
-    config.debug = args.debug
+    # Load and merge configurations
+    config = EnhancedConfig()
+    if args.config:
+        with open(args.config) as f:
+            config_dict = yaml.safe_load(f)
+            config = EnhancedConfig(**config_dict)
+    
+    # Override with command line arguments
+    if args.debug:
+        config.debug = True
+    if args.n_jobs:
+        config.n_jobs = args.n_jobs
+    if args.parallel:
+        config.processing.parallel = True
     
     # Setup logging
     setup_logging(config)
     
     try:
-        # Record start time
+        # Initialize components
+        validator = DataValidator(config)
+        processor = DataProcessor(config)
+        trainer = ModelTrainer(config)
+        results_manager = ResultsManager(config)
+        
+        # Record start time and create timestamp
         total_start_time = time.time()
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         
-        # Execute pipeline
-        logging.info("Starting analysis pipeline")
+        logging.info("Starting enhanced analysis pipeline")
         
-        # Load data
+        # Load and validate data
         data = load_data(config)
-        if not validate_data(data):
-            raise ValueError("Data validation failed")
+        for name, df in data.items():
+            if not all([
+                validator.validate_schema(df, name),
+                validator.validate_ranges(df, name)
+            ]):
+                raise ValueError(f"Data validation failed for {name}")
         
-        # Preprocess data
-        processed_data = preprocess_data(data, config)
-        
-        # Extract features
-        features_df = extract_features(processed_data, config)
+        # Process data and extract features
+        processed_data = processor.process_in_parallel(preprocess_data, data)
+        features_df = processor.apply_feature_extraction(processed_data)
         
         # Perform analysis
         analysis_results = perform_analysis(features_df, config)
         
-        # Train models
-        ml_results = train_models(features_df, config)
+        # Train and evaluate models
+        ml_results = {}
+        for model_type in config.ml.model_types:
+            ml_results[model_type] = trainer.train_with_cv(
+                features_df.drop(columns=[config.ml.target_feature]),
+                features_df[config.ml.target_feature],
+                model_type
+            )
         
         # Generate visualizations
-        generate_visualizations(features_df, analysis_results, config)
+        generate_visualizations(features_df, analysis_results, ml_results, config)
         
         # Save results
-        save_results(features_df, analysis_results, ml_results, config)
+        results = {
+            'features': features_df,
+            'analysis': analysis_results,
+            'ml_results': ml_results
+        }
+        results_manager.save_results(results, timestamp)
         
         # Log completion
         total_time = time.time() - total_start_time
         logging.info(f"Pipeline completed successfully in {total_time:.2f} seconds")
         
     except Exception as e:
-        logging.error(f"Pipeline failed: {e}")
+        logging.error(f"Pipeline failed: {e}", exc_info=True)
         raise
+    finally:
+        if hasattr(processor, 'executor') and processor.executor:
+            processor.executor.shutdown()
 
 if __name__ == '__main__':
     main()
