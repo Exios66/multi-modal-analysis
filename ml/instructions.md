@@ -1,34 +1,32 @@
-Certainly! Expanding your Comprehensive Python Application for Psychometric and Neurological Data Analysis to include Natural Language Processing (NLP) and Machine Learning (ML) capabilities will significantly enhance its analytical power. This expansion will enable the application to process and analyze textual data from surveys, apply advanced ML algorithms for predictive and prescriptive analytics, and draw insightful conclusions from the diverse datasets. Below is a detailed, step-by-step guide to integrating these functionalities into your existing framework.
+# Comprehensive Python Application for Psychometric and Neurological Data Analysis with NLP and ML Integration
 
-Comprehensive Python Application for Psychometric and Neurological Data Analysis with NLP and ML Integration
-
-Table of Contents
-
-	1.	Introduction
-	2.	Project Overview
-	3.	System Architecture
-	4.	Implementation Steps
-	•	Step 1: Set Up the Development Environment
-	•	Step 2: Organize the Project Directory
-	•	Step 3: Develop the Data Ingestion Module
-	•	Step 4: Develop the Data Preprocessing Module
-	•	Step 5: Develop the Feature Extraction Module
-	•	Step 6: Develop the Correlation Analysis Module
-	•	Step 7: Develop the Visualization Module
-	•	Step 8: Develop the NLP Processing Module
-	•	Step 9: Develop the Machine Learning Module
-	•	Step 10: Update the Main Application Workflow
-	•	Step 11: Deployment of ML Models
-	5.	Code Modules
-	6.	Dependencies and Installation
-	7.	Running the Application
-	8.	Conclusion
-	9.	Appendices
-	•	Appendix A: Full Source Code
-	•	Appendix B: Dataset Format Examples
-	•	Appendix C: Sample .csv Files
+## Table of Contents
 
 1. Introduction
+2. Project Overview
+3. System Architecture
+4. Implementation Steps
+    • Step 1: Set Up the Development Environment
+    • Step 2: Organize the Project Directory
+    • Step 3: Develop the Data Ingestion Module
+    • Step 4: Develop the Data Preprocessing Module
+    • Step 5: Develop the Feature Extraction Module
+    • Step 6: Develop the Correlation Analysis Module
+    • Step 7: Develop the Visualization Module
+    • Step 8: Develop the NLP Processing Module
+    • Step 9: Develop the Machine Learning Module
+    • Step 10: Update the Main Application Workflow
+    • Step 11: Deployment of ML Models
+5. Code Modules
+6. Dependencies and Installation
+7. Running the Application
+8. Conclusion
+9. Appendices
+    • Appendix A: Full Source Code
+    • Appendix B: Dataset Format Examples
+    • Appendix C: Sample .csv Files
+
+### Introduction
 
 Overview
 
@@ -36,80 +34,76 @@ This expanded guide outlines the development of a Python application designed fo
 
 Key Enhancements
 
-	•	Natural Language Processing (NLP): Analyze textual survey responses to extract sentiments, topics, and other linguistic features.
-	•	Machine Learning (ML): Implement predictive models to forecast health outcomes, classify participant responses, and identify patterns within the data.
-	•	Advanced Correlation and Statistical Analysis: Utilize ML-driven statistical methods to assess relationships within the data.
-	•	Deployment: Deploy ML models as APIs for real-time inference and integration with other systems.
+ • Natural Language Processing (NLP): Analyze textual survey responses to extract sentiments, topics, and other linguistic features.
+ • Machine Learning (ML): Implement predictive models to forecast health outcomes, classify participant responses, and identify patterns within the data.
+ • Advanced Correlation and Statistical Analysis: Utilize ML-driven statistical methods to assess relationships within the data.
+ • Deployment: Deploy ML models as APIs for real-time inference and integration with other systems.
 
-2. Project Overview
+### Project Overview
 
-Core Functionalities
+#### Core Functionalities
 
-	1.	Data Ingestion: Efficiently reads data from multiple formats and validates their integrity.
-	2.	Data Preprocessing: Cleans, normalizes, and synchronizes data to prepare it for analysis.
-	3.	Feature Extraction: Derives meaningful metrics and features from raw data sources, including textual data.
-	4.	Natural Language Processing (NLP): Processes and extracts features from textual survey responses.
-	5.	Machine Learning (ML): Applies ML algorithms for predictive analytics and pattern recognition.
-	6.	Correlation and Statistical Analysis: Identifies and quantifies relationships between different datasets.
-	7.	Visualization: Creates intuitive visual representations of data and analytical findings.
-	8.	Deployment: Provides APIs for ML model deployment, enabling real-time data analysis and prediction.
+1. Data Ingestion: Efficiently reads data from multiple formats and validates their integrity.
+2. Data Preprocessing: Cleans, normalizes, and synchronizes data to prepare it for analysis.
+3. Feature Extraction: Derives meaningful metrics and features from raw data sources, including textual data.
+4. Natural Language Processing (NLP): Processes and extracts features from textual survey responses.
+5. Machine Learning (ML): Applies ML algorithms for predictive analytics and pattern recognition.
+6. Correlation and Statistical Analysis: Identifies and quantifies relationships between different datasets.
+7. Visualization: Creates intuitive visual representations of data and analytical findings.
+8. Deployment: Provides APIs for ML model deployment, enabling real-time data analysis and prediction.
 
-3. System Architecture
+### System Architecture
 
-Modular Design
+#### Modular Design
 
 The enhanced system architecture incorporates additional layers and modules to support NLP and ML functionalities while maintaining separation of concerns, ease of maintenance, and scalability.
 
-	•	Input Layer:
-	•	Data Ingestion Module: Handles reading data from various sources and formats with robust error handling and logging.
-	•	Processing Layer:
-	•	Data Preprocessing Module: Cleans and formats the data, including handling missing values, outlier removal, and artifact correction.
-	•	Feature Extraction Module: Extracts key features from the preprocessed data, including statistical features and NLP-derived features.
-	•	Analysis Layer:
-	•	Correlation Analysis Module: Performs statistical analyses to find correlations using multiple methods.
-	•	Machine Learning Module: Implements ML algorithms for predictive modeling, classification, and clustering.
-	•	Output Layer:
-	•	Visualization Module: Generates visual insights such as plots and heatmaps.
-	•	Deployment Module: Deploys trained ML models as APIs for real-time inference.
+ • Input Layer:
+ • Data Ingestion Module: Handles reading data from various sources and formats with robust error handling and logging.
+ • Processing Layer:
+ • Data Preprocessing Module: Cleans and formats the data, including handling missing values, outlier removal, and artifact correction.
+ • Feature Extraction Module: Extracts key features from the preprocessed data, including statistical features and NLP-derived features.
+ • Analysis Layer:
+ • Correlation Analysis Module: Performs statistical analyses to find correlations using multiple methods.
+ • Machine Learning Module: Implements ML algorithms for predictive modeling, classification, and clustering.
+ • Output Layer:
+ • Visualization Module: Generates visual insights such as plots and heatmaps.
+ • Deployment Module: Deploys trained ML models as APIs for real-time inference.
 
 This modular architecture ensures that each component can be developed, tested, and maintained independently, enhancing the overall robustness and scalability of the application.
 
-4. Implementation Steps
+### Implementation Steps
 
-Let’s comprehensively expand each implementation step to include NLP and ML functionalities.
-
-Step 1: Set Up the Development Environment
+#### Step 1: Set Up the Development Environment
 
 Detailed Steps
 
-	1.	Install Python:
-	•	Ensure Python 3.8 or higher is installed. You can download it from the official website.
-	2.	Create a Virtual Environment:
-	•	Virtual environments help manage dependencies and avoid conflicts.
+ 1. Install Python:
+ • Ensure Python 3.8 or higher is installed. You can download it from the official website.
+ 2. Create a Virtual Environment:
+ • Virtual environments help manage dependencies and avoid conflicts.
 
 python3 -m venv venv
 
+#### Step 2: Activate the Virtual Environment
 
-	3.	Activate the Virtual Environment:
-	•	On macOS/Linux:
+ • On macOS/Linux:
 
 source venv/bin/activate
 
-
-	•	On Windows:
+ • On Windows:
 
 venv\Scripts\activate
 
+#### Step 3: Install Required Packages
 
-	4.	Install Required Packages:
-	•	It’s good practice to pin package versions for reproducibility.
+ • It's good practice to pin package versions for reproducibility.
 
 pip install numpy pandas scipy scikit-learn matplotlib seaborn mne nltk spacy gensim transformers flask fastapi uvicorn joblib
 
-	•	Alternatively, use the requirements.txt for installation:
+ • Alternatively, use the requirements.txt for installation:
 
 pip install -r requirements.txt
-
 
 Updated requirements.txt
 
@@ -131,23 +125,22 @@ joblib==1.3.2
 
 Note: Depending on your specific NLP and ML needs, you might need to install additional packages or specific versions. Ensure compatibility among package versions to avoid conflicts.
 
-	5.	Download NLTK Data:
-	•	Some NLTK functionalities require downloading additional data packages.
+#### Step 4: Download NLTK Data
+
+ • Some NLTK functionalities require downloading additional data packages.
 
 import nltk
 nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
 
+#### Step 5: Download spaCy Models
 
-	6.	Download spaCy Models:
-	•	For advanced NLP tasks, spaCy models need to be downloaded.
+ • For advanced NLP tasks, spaCy models need to be downloaded.
 
 python -m spacy download en_core_web_sm
 
-
-
-Step 2: Organize the Project Directory
+#### Step 6: Organize the Project Directory
 
 Recommended Directory Structure
 
@@ -195,49 +188,52 @@ Recommended Directory Structure
     ├── README.md
     └── .gitignore
 
-Additional Considerations
+#### Additional Considerations
 
-	•	models/ Directory: Stores trained ML models for deployment and future use.
-	•	deployment/ Directory: Contains scripts and configurations for deploying ML models as APIs.
-	•	nlp_processing.py: Handles NLP-specific preprocessing and feature extraction.
-	•	machine_learning.py: Contains ML algorithms for training, evaluation, and prediction.
-	•	test_nlp_processing.py and test_machine_learning.py: Unit tests for the new modules.
+ • models/ Directory: Stores trained ML models for deployment and future use.
+ • deployment/ Directory: Contains scripts and configurations for deploying ML models as APIs.
+ • nlp_processing.py: Handles NLP-specific preprocessing and feature extraction.
+ • machine_learning.py: Contains ML algorithms for training, evaluation, and prediction.
+ • test_nlp_processing.py and test_machine_learning.py: Unit tests for the new modules.
 
-Sample .gitignore Update
+#### Sample .gitignore Update
 
-# Trained ML models
+#### Trained ML models
+
 models/trained_models/
 
-# Deployment
+#### Deployment
+
 deployment/__pycache__/
 deployment/*.pyc
 
-# Other additions
+#### Other additions
+
 output/
 
-Step 3: Develop the Data Ingestion Module
+#### Step 7: Develop the Data Ingestion Module
 
 Refer to the previous assistant message for the data_ingestion.py module. Ensure that it remains robust to handle any additional data types introduced by NLP and ML processes.
 
-Step 4: Develop the Data Preprocessing Module
+#### Step 8: Develop the Data Preprocessing Module
 
 Refer to the previous assistant message for the data_preprocessing.py module. Ensure that it remains robust and includes any additional preprocessing steps required for ML and NLP tasks.
 
-Step 5: Develop the Feature Extraction Module
+#### Step 9: Develop the Feature Extraction Module
 
 Refer to the previous assistant message for the feature_extraction.py module. Ensure that it can handle additional features derived from NLP processes.
 
-Step 6: Develop the Correlation Analysis Module
+#### Step 10: Develop the Correlation Analysis Module
 
 Refer to the previous assistant message for the correlation_analysis.py module. Ensure that it can support additional statistical analyses driven by ML requirements.
 
-Step 7: Develop the Visualization Module
+#### Step 11: Develop the Visualization Module
 
 Refer to the previous assistant message for the visualization.py module. Ensure that it can handle visualizations related to ML model performance and NLP analysis.
 
-Step 8: Develop the NLP Processing Module
+#### Step 12: Develop the NLP Processing Module
 
-Purpose
+#### Purpose
 
 To process and extract features from textual survey responses, enabling sentiment analysis, topic modeling, and other linguistic feature extractions essential for comprehensive data analysis.
 
@@ -255,21 +251,24 @@ from gensim import corpora, models
 from sklearn.feature_extraction.text import TfidfVectorizer
 from transformers import pipeline
 
-# Configure logging
+#### Configure ML Module Logging
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize spaCy model
+#### Initialize spaCy model
+
 nlp = spacy.load('en_core_web_sm')
 
-# Initialize NLTK tools
+#### Initialize NLTK tools
+
 lemmatizer = WordNetLemmatizer()
 stop_words = set(stopwords.words('english'))
 
 def clean_text(text):
     """
     Clean and preprocess text data.
-    
+
     Steps:
     - Lowercasing
     - Removing punctuation and numbers
@@ -300,7 +299,7 @@ def clean_text(text):
 def preprocess_text_data(df, text_column):
     """
     Apply text cleaning to a specific column in the DataFrame.
-    
+
     Parameters:
     - df: pandas DataFrame
     - text_column: string, name of the column containing text data
@@ -319,7 +318,7 @@ def preprocess_text_data(df, text_column):
 def extract_sentiment(df, text_column='cleaned_text'):
     """
     Extract sentiment scores from text data using Hugging Face transformers.
-    
+
     Parameters:
     - df: pandas DataFrame
     - text_column: string, name of the column containing cleaned text data
@@ -340,7 +339,7 @@ def extract_sentiment(df, text_column='cleaned_text'):
 def extract_tfidf_features(df, text_column='cleaned_text', max_features=1000):
     """
     Extract TF-IDF features from text data.
-    
+
     Parameters:
     - df: pandas DataFrame
     - text_column: string, name of the column containing cleaned text data
@@ -362,7 +361,7 @@ def extract_tfidf_features(df, text_column='cleaned_text', max_features=1000):
 def perform_topic_modeling(df, text_column='cleaned_text', num_topics=5):
     """
     Perform topic modeling using Latent Dirichlet Allocation (LDA).
-    
+
     Parameters:
     - df: pandas DataFrame
     - text_column: string, name of the column containing cleaned text data
@@ -389,12 +388,12 @@ def perform_topic_modeling(df, text_column='cleaned_text', num_topics=5):
         logger.error(f"Error performing topic modeling: {e}")
         raise
 
-Enhancements
+#### Enhancements
 
-	•	Text Cleaning: Implements comprehensive text cleaning, including lowercasing, removal of punctuation and numbers, stopword removal, and lemmatization.
-	•	Sentiment Analysis: Utilizes Hugging Face’s transformers pipeline to extract sentiment labels (e.g., POSITIVE, NEGATIVE) from cleaned text data.
-	•	TF-IDF Feature Extraction: Converts textual data into numerical features using TF-IDF vectorization, facilitating ML model training.
-	•	Topic Modeling: Applies LDA to identify underlying topics within textual data, adding topic distributions as features.
+ • Text Cleaning: Implements comprehensive text cleaning, including lowercasing, removal of punctuation and numbers, stopword removal, and lemmatization.
+ • Sentiment Analysis: Utilizes Hugging Face's transformers pipeline to extract sentiment labels (e.g., POSITIVE, NEGATIVE) from cleaned text data.
+ • TF-IDF Feature Extraction: Converts textual data into numerical features using TF-IDF vectorization, facilitating ML model training.
+ • Topic Modeling: Applies LDA to identify underlying topics within textual data, adding topic distributions as features.
 
 Step 9: Develop the Machine Learning Module
 
@@ -416,14 +415,15 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 
-# Configure logging
+#### Configure Logging for Machine Learning Module
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def train_classification_model(X, y, model_type='RandomForest', params=None):
     """
     Train a classification model.
-    
+
     Parameters:
     - X: pandas DataFrame, feature matrix
     - y: pandas Series or array-like, target labels
@@ -464,7 +464,7 @@ def train_classification_model(X, y, model_type='RandomForest', params=None):
 def train_regression_model(X, y, model_type='RandomForest', params=None):
     """
     Train a regression model.
-    
+
     Parameters:
     - X: pandas DataFrame, feature matrix
     - y: pandas Series or array-like, target variable
@@ -505,7 +505,7 @@ def train_regression_model(X, y, model_type='RandomForest', params=None):
 def evaluate_classification_model(model, X_test, y_test):
     """
     Evaluate a classification model.
-    
+
     Parameters:
     - model: trained classification model
     - X_test: pandas DataFrame, test feature matrix
@@ -528,7 +528,7 @@ def evaluate_classification_model(model, X_test, y_test):
 def evaluate_regression_model(model, X_test, y_test):
     """
     Evaluate a regression model.
-    
+
     Parameters:
     - model: trained regression model
     - X_test: pandas DataFrame, test feature matrix
@@ -551,7 +551,7 @@ def evaluate_regression_model(model, X_test, y_test):
 def train_clustering_model(X, n_clusters=5, random_state=42):
     """
     Train a clustering model using K-Means.
-    
+
     Parameters:
     - X: pandas DataFrame, feature matrix
     - n_clusters: int, number of clusters
@@ -576,7 +576,7 @@ def train_clustering_model(X, n_clusters=5, random_state=42):
 def save_model(model, filepath):
     """
     Save a trained model to disk.
-    
+
     Parameters:
     - model: trained model
     - filepath: string, path to save the model
@@ -591,7 +591,7 @@ def save_model(model, filepath):
 def load_model(filepath):
     """
     Load a trained model from disk.
-    
+
     Parameters:
     - filepath: string, path to the saved model
     
@@ -608,12 +608,12 @@ def load_model(filepath):
 
 Enhancements
 
-	•	Classification Models: Implements Logistic Regression and Random Forest Classifier with options for hyperparameter tuning via GridSearchCV.
-	•	Regression Models: Implements Linear Regression and Random Forest Regressor with options for hyperparameter tuning.
-	•	Clustering Models: Implements K-Means clustering with feature scaling.
-	•	Model Evaluation: Provides functions to evaluate classification and regression models using appropriate metrics.
-	•	Model Persistence: Includes functions to save and load trained models using joblib.
-	•	Pipeline Integration: Utilizes Scikit-learn pipelines for streamlined preprocessing and modeling.
+ • Classification Models: Implements Logistic Regression and Random Forest Classifier with options for hyperparameter tuning via GridSearchCV.
+ • Regression Models: Implements Linear Regression and Random Forest Regressor with options for hyperparameter tuning.
+ • Clustering Models: Implements K-Means clustering with feature scaling.
+ • Model Evaluation: Provides functions to evaluate classification and regression models using appropriate metrics.
+ • Model Persistence: Includes functions to save and load trained models using joblib.
+ • Pipeline Integration: Utilizes Scikit-learn pipelines for streamlined preprocessing and modeling.
 
 Step 10: Update the Main Application Workflow
 
@@ -628,7 +628,8 @@ import pandas as pd
 import logging
 import joblib
 
-# Import custom modules
+#### Import custom modules
+
 from src.data_ingestion import (
     load_eye_tracking_data,
     load_eeg_data,
@@ -677,7 +678,8 @@ from src.machine_learning import (
     save_model
 )
 
-# Configure logging
+#### Configure logging
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -685,7 +687,7 @@ def main():
     try:
         # Define data directory
         data_dir = 'data'
-        
+
         # Data Ingestion
         eye_data_path = os.path.join(data_dir, 'eye_tracking', 'eye_data.csv')
         eeg_data_path = os.path.join(data_dir, 'eeg', 'eeg_data.edf')
@@ -815,4 +817,5 @@ def main():
         plot_feature_distributions(features_df, output_path=os.path.join(output_dir, 'feature_distributions.png'))
         
         # Regression Results
-        if reg_model
+        if reg_model:
+            plot_regression_results(reg_model, X_test, y_test, output_path=os.path.join(output_dir, 'regression_results.png'))
