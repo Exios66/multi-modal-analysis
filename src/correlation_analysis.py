@@ -1,76 +1,121 @@
 import pandas as pd
 import numpy as np
-from scipy.stats import pearsonr, spearmanr
+from typing import Dict, Any
 import logging
+from scipy import stats
+import seaborn as sns
+import matplotlib.pyplot as plt
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def compute_correlations(features_df, method='pearson'):
+def analyze_multimodal_correlations(features_dict: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
     """
-    Compute correlation matrix for the features dataframe.
+    Analyze correlations between features from different modalities.
     
-    Parameters:
-    - features_df: pandas DataFrame containing features.
-    - method: correlation method ('pearson', 'spearman', 'kendall')
-    
+    Args:
+        features_dict: Dictionary containing features from each modality
+        
     Returns:
-    - Correlation matrix as pandas DataFrame.
+        Dictionary containing correlation analysis results
     """
     try:
-        corr_matrix = features_df.corr(method=method)
-        logger.info(f"Correlation matrix computed using {method} method")
-        return corr_matrix
+        # Combine features from all modalities
+        combined_features = combine_features(features_dict)
+        
+        results = {
+            'correlation_matrix': calculate_correlation_matrix(combined_features),
+            'cross_modality_correlations': analyze_cross_modality_correlations(features_dict),
+            'feature_importance': calculate_feature_importance(combined_features),
+            'modality_relationships': analyze_modality_relationships(features_dict)
+        }
+        
+        logger.info("Successfully completed correlation analysis")
+        return results
+        
     except Exception as e:
-        logger.error(f"Error computing correlation matrix: {e}")
+        logger.error(f"Error in correlation analysis: {str(e)}")
         raise
 
-def identify_significant_correlations(corr_matrix, threshold=0.5, method='pearson'):
-    """
-    Identify correlations above a specified threshold.
+def combine_features(features_dict: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """Combine features from all modalities into a single DataFrame"""
+    combined = pd.DataFrame()
     
-    Parameters:
-    - corr_matrix: pandas DataFrame representing the correlation matrix.
-    - threshold: float, the correlation coefficient threshold.
-    - method: string, correlation method used.
+    for modality, features in features_dict.items():
+        # Add prefix to column names to identify modality
+        features = features.add_prefix(f"{modality}_")
+        combined = pd.concat([combined, features], axis=1)
     
-    Returns:
-    - DataFrame of significant correlations.
-    """
-    try:
-        significant = corr_matrix.where((corr_matrix.abs() >= threshold) & (corr_matrix.abs() != 1.0))
-        significant = significant.stack().reset_index()
-        significant.columns = ['Feature_1', 'Feature_2', 'Correlation']
-        # Remove duplicate pairs
-        significant = significant[significant['Feature_1'] < significant['Feature_2']]
-        logger.info(f"Identified {significant.shape[0]} significant correlations using threshold {threshold}")
-        return significant
-    except Exception as e:
-        logger.error(f"Error identifying significant correlations: {e}")
-        raise
+    return combined
 
-def perform_regression(features_df, target_feature):
-    """
-    Perform linear regression predicting target_feature from other features.
+def calculate_correlation_matrix(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate correlation matrix for all features"""
+    return df.corr(method='spearman')
+
+def analyze_cross_modality_correlations(features_dict: Dict[str, pd.DataFrame]) -> Dict[str, float]:
+    """Analyze correlations between different modalities"""
+    cross_correlations = {}
     
-    Parameters:
-    - features_df: pandas DataFrame containing features.
-    - target_feature: string, the feature to predict.
+    modalities = list(features_dict.keys())
+    for i in range(len(modalities)):
+        for j in range(i + 1, len(modalities)):
+            mod1, mod2 = modalities[i], modalities[j]
+            correlation = calculate_modality_correlation(
+                features_dict[mod1], 
+                features_dict[mod2]
+            )
+            cross_correlations[f"{mod1}_vs_{mod2}"] = correlation
     
-    Returns:
-    - Regression results as a pandas DataFrame.
-    """
-    from sklearn.linear_model import LinearRegression
-    try:
-        X = features_df.drop(columns=[target_feature]).values
-        y = features_df[target_feature].values
-        model = LinearRegression()
-        model.fit(X, y)
-        coefficients = pd.Series(model.coef_, index=features_df.drop(columns=[target_feature]).columns)
-        intercept = model.intercept_
-        logger.info(f"Performed linear regression for {target_feature}")
-        return pd.DataFrame({'Feature': coefficients.index, 'Coefficient': coefficients.values})
-    except Exception as e:
-        logger.error(f"Error performing regression: {e}")
-        raise
+    return cross_correlations
+
+def calculate_feature_importance(df: pd.DataFrame) -> pd.Series:
+    """Calculate importance of each feature based on correlation strength"""
+    corr_matrix = df.corr().abs()
+    
+    # Calculate mean absolute correlation for each feature
+    importance = corr_matrix.mean()
+    
+    # Sort features by importance
+    return importance.sort_values(ascending=False)
+
+def analyze_modality_relationships(features_dict: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
+    """Analyze relationships between different modalities"""
+    relationships = {}
+    
+    for mod1, features1 in features_dict.items():
+        for mod2, features2 in features_dict.items():
+            if mod1 < mod2:  # Avoid duplicate comparisons
+                key = f"{mod1}_vs_{mod2}"
+                relationships[key] = {
+                    'correlation': calculate_modality_correlation(features1, features2),
+                    'mutual_information': calculate_mutual_information(features1, features2)
+                }
+    
+    return relationships
+
+def calculate_modality_correlation(df1: pd.DataFrame, df2: pd.DataFrame) -> float:
+    """Calculate average correlation between two modalities"""
+    # Calculate correlation between all pairs of features
+    correlations = []
+    for col1 in df1.columns:
+        for col2 in df2.columns:
+            corr = stats.spearmanr(df1[col1], df2[col2])[0]
+            correlations.append(abs(corr))
+    
+    return np.mean(correlations)
+
+def calculate_mutual_information(df1: pd.DataFrame, df2: pd.DataFrame) -> float:
+    """Calculate mutual information between two modalities"""
+    # Simplified mutual information calculation
+    mi_scores = []
+    for col1 in df1.columns:
+        for col2 in df2.columns:
+            mi = calculate_mi_score(df1[col1], df2[col2])
+            mi_scores.append(mi)
+    
+    return np.mean(mi_scores)
+
+def calculate_mi_score(x: pd.Series, y: pd.Series, bins: int = 10) -> float:
+    """Calculate mutual information score between two variables"""
+    c_xy = np.histogram2d(x, y, bins)[0]
+    mi = stats.mutual_info_score(None, None, contingency=c_xy)
+    return mi

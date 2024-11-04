@@ -12,8 +12,9 @@ except ImportError:
     tk = None  # GUI will not be available if Tkinter is not installed
 
 # Configure Logging
+os.makedirs('output/logs', exist_ok=True)
 logging.basicConfig(
-    filename='number_selector.log',
+    filename='output/logs/number_selector.log',
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
@@ -162,8 +163,8 @@ def main():
                 default_filename = f"number_sets_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{file_format}"
                 filename = get_user_input("Enter filename", default_filename)
                 
-                # Create Outputs/Randomizer directory if it doesn't exist
-                output_dir = os.path.join('Outputs', 'Randomizer')
+                # Create output/results/randomizer directory if it doesn't exist
+                output_dir = os.path.join('output', 'results', 'randomizer')
                 os.makedirs(output_dir, exist_ok=True)
                 
                 # Join the directory with filename
@@ -220,8 +221,8 @@ def launch_gui():
                 file_format = file_format_var.get()
                 default_filename = f"number_sets_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{file_format}"
                 
-                # Create Outputs/Randomizer directory if it doesn't exist
-                output_dir = os.path.join('Outputs', 'Randomizer')
+                # Create output/results/randomizer directory if it doesn't exist
+                output_dir = os.path.join('output', 'results', 'randomizer')
                 os.makedirs(output_dir, exist_ok=True)
                 
                 # Configure file dialog to start in the output directory

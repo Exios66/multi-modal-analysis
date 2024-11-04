@@ -1,83 +1,134 @@
-import numpy as np
 import pandas as pd
-import mne
+import numpy as np
+from typing import Dict, Any
 import logging
+from scipy import stats
+from scipy.signal import welch
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def extract_eye_tracking_features(df):
+def extract_multimodal_features(data_dict: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
+    """
+    Extract features from preprocessed multimodal data.
+    
+    Args:
+        data_dict: Dictionary containing preprocessed data for each modality
+        
+    Returns:
+        Dictionary containing extracted features for each modality
+    """
+    features = {}
+    
     try:
-        features = {}
-        features['avg_fixation_duration'] = df['fixation_duration'].mean()
-        features['max_fixation_duration'] = df['fixation_duration'].max()
-        features['total_fixations'] = df.shape[0]
-        features['avg_saccade_amplitude'] = df['saccade_amplitude'].mean()
-        features['avg_pupil_size'] = df['pupil_size'].mean()
-        logger.info("Eye tracking features extracted")
+        # Extract features from eye tracking data
+        if 'eye_tracking' in data_dict:
+            features['eye_tracking'] = extract_eye_tracking_features(data_dict['eye_tracking'])
+            
+        # Extract features from face heatmap data
+        if 'face_heatmap' in data_dict:
+            features['face_heatmap'] = extract_face_heatmap_features(data_dict['face_heatmap'])
+            
+        # Extract features from vitals data
+        if 'vitals' in data_dict:
+            features['vitals'] = extract_vitals_features(data_dict['vitals'])
+            
+        # Extract features from EEG data
+        if 'eeg' in data_dict:
+            features['eeg'] = extract_eeg_features(data_dict['eeg'])
+            
+        # Extract features from survey data
+        if 'survey' in data_dict:
+            features['survey'] = extract_survey_features(data_dict['survey'])
+            
+        logger.info("Successfully extracted features from all modalities")
         return features
+        
     except Exception as e:
-        logger.error(f"Error extracting eye tracking features: {e}")
+        logger.error(f"Error in feature extraction: {str(e)}")
         raise
 
-def extract_eeg_features(raw):
-    try:
-        features = {}
-        # Compute Power Spectral Density (PSD) for standard frequency bands
-        psd, freqs = mne.time_frequency.psd_welch(raw, n_fft=2048)
-        # Define frequency bands
-        bands = {'delta': (1, 4),
-                 'theta': (4, 8),
-                 'alpha': (8, 13),
-                 'beta': (13, 30),
-                 'gamma': (30, 50)}
-        for band, (low, high) in bands.items():
-            idx_band = np.logical_and(freqs >= low, freqs <= high)
-            band_power = psd[:, idx_band].mean(axis=1)
-            # Average across channels
-            features[f'{band}_band_power'] = band_power.mean()
-        logger.info("EEG features extracted")
-        return features
-    except Exception as e:
-        logger.error(f"Error extracting EEG features: {e}")
-        raise
+def extract_eye_tracking_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Extract features from eye tracking data"""
+    features = pd.DataFrame()
+    
+    # Statistical features
+    features['mean_velocity'] = df['velocity'].mean()
+    features['max_velocity'] = df['velocity'].max()
+    features['std_velocity'] = df['velocity'].std()
+    
+    # Spatial features
+    features['gaze_dispersion'] = calculate_dispersion(df['x_position'], df['y_position'])
+    
+    return features
 
-def extract_vitals_features(df):
-    try:
-        features = {}
-        features['avg_heart_rate'] = df['heart_rate'].mean()
-        features['max_heart_rate'] = df['heart_rate'].max()
-        features['min_heart_rate'] = df['heart_rate'].min()
-        features['avg_blood_pressure'] = df['blood_pressure_systolic'].mean()
-        logger.info("Vitals features extracted")
-        return features
-    except Exception as e:
-        logger.error(f"Error extracting vitals features: {e}")
-        raise
+def extract_face_heatmap_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Extract features from face heatmap data"""
+    features = pd.DataFrame()
+    
+    # Statistical features
+    features['mean_intensity'] = df['heatmap_values'].mean()
+    features['max_intensity'] = df['heatmap_values'].max()
+    features['intensity_variance'] = df['heatmap_values'].var()
+    
+    return features
 
-def extract_face_heatmap_features(df):
-    try:
-        features = {}
-        # Example: Average intensity per facial region
-        facial_regions = ['left_eye', 'right_eye', 'nose', 'mouth', 'forehead']
-        for region in facial_regions:
-            if region in df.columns:
-                features[f'avg_{region}_intensity'] = df[region].mean()
-        logger.info("Face heatmap features extracted")
-        return features
-    except Exception as e:
-        logger.error(f"Error extracting face heatmap features: {e}")
-        raise
+def extract_vitals_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Extract features from vitals data"""
+    features = pd.DataFrame()
+    
+    for col in ['heart_rate', 'blood_pressure', 'temperature']:
+        # Basic statistics
+        features[f'{col}_mean'] = df[col].mean()
+        features[f'{col}_std'] = df[col].std()
+        features[f'{col}_range'] = df[col].max() - df[col].min()
+        
+        # Time-domain features
+        features[f'{col}_trend'] = calculate_trend(df[col])
+        
+    return features
 
-def extract_survey_features(df):
-    try:
-        features = {}
-        # Assuming survey responses are numerical scores
-        for question_id, response_score in df.groupby('question_id')['response_score'].mean().items():
-            features[f'question_{question_id}_avg_score'] = response_score
-        logger.info("Survey features extracted")
-        return features
-    except Exception as e:
-        logger.error(f"Error extracting survey features: {e}")
-        raise
+def extract_eeg_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Extract features from EEG data"""
+    features = pd.DataFrame()
+    
+    for channel in df.columns[:-1]:  # Exclude timestamp column
+        # Frequency domain features
+        freqs, psd = welch(df[channel], fs=250)  # Assuming 250 Hz sampling rate
+        
+        # Calculate power in different frequency bands
+        features[f'{channel}_delta'] = calculate_band_power(freqs, psd, 1, 4)
+        features[f'{channel}_theta'] = calculate_band_power(freqs, psd, 4, 8)
+        features[f'{channel}_alpha'] = calculate_band_power(freqs, psd, 8, 13)
+        features[f'{channel}_beta'] = calculate_band_power(freqs, psd, 13, 30)
+        
+    return features
+
+def extract_survey_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Extract features from survey data"""
+    features = pd.DataFrame()
+    
+    # Calculate basic statistics of responses
+    features['mean_response'] = df['response'].mean()
+    features['response_std'] = df['response'].std()
+    
+    # Calculate response patterns
+    features['response_entropy'] = stats.entropy(df['response'].value_counts(normalize=True))
+    
+    return features
+
+# Helper functions
+def calculate_dispersion(x: pd.Series, y: pd.Series) -> float:
+    """Calculate spatial dispersion of gaze points"""
+    return np.sqrt(x.var() + y.var())
+
+def calculate_trend(series: pd.Series) -> float:
+    """Calculate linear trend in time series"""
+    x = np.arange(len(series))
+    slope, _ = np.polyfit(x, series, 1)
+    return slope
+
+def calculate_band_power(freqs: np.ndarray, psd: np.ndarray, 
+                        low_freq: float, high_freq: float) -> float:
+    """Calculate power in specific frequency band"""
+    idx = np.logical_and(freqs >= low_freq, freqs <= high_freq)
+    return np.mean(psd[idx])
